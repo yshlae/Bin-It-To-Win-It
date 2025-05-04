@@ -1,0 +1,322 @@
+import tkinter as tk
+from tkinter import ttk, messagebox
+import json
+from datetime import datetime
+
+class BinItToWinItApp:
+    def __init__(self):
+        self.root = tk.Tk()
+        self.root.title("Bin It to Win It")
+        self.root.geometry("600x500")
+        self.residents_file = "residents.json"
+        self.residents_data = self.load_residents_data()
+        self.current_resident = None
+
+        # Apply green color palette
+        self.style = ttk.Style()
+        self.style.theme_use('default')
+        self.root.configure(bg='#d0f0c0')
+        self.style.configure('TFrame', background='#d0f0c0')
+        self.style.configure('TLabel', background='#d0f0c0', foreground='#004d00')
+        self.style.configure('TButton', background='#66bb6a', foreground='white')
+        self.style.map('TButton',
+            background=[('active', '#4caf50')],
+            foreground=[('disabled', 'gray')]
+        )
+        self.style.configure('TCombobox', fieldbackground='#e6f5e6', background='#66bb6a')
+
+        self.setup_ui()
+
+    def load_residents_data(self):
+        try:
+            with open(self.residents_file, "r") as file:
+                return json.load(file)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return {}
+
+    def save_residents_data(self):
+        try:
+            with open(self.residents_file, "w") as file:
+                json.dump(self.residents_data, file, indent=4)
+        except IOError as e:
+            messagebox.showerror("Error", f"Failed to save data: {e}")
+
+    def setup_ui(self):
+        self.main_menu_frame = ttk.Frame(self.root)
+        self.main_menu_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+
+        self.title_label = ttk.Label(self.main_menu_frame, text="Bin It to Win It", font=("Helvetica", 20, "bold"))
+        self.title_label.pack(pady=(0, 20))
+
+        self.register_button = ttk.Button(self.main_menu_frame, text="Register", command=self.show_register_frame)
+        self.register_button.pack(fill=tk.X, pady=(0, 10))
+
+        self.login_button = ttk.Button(self.main_menu_frame, text="Login", command=self.show_login_frame)
+        self.login_button.pack(fill=tk.X, pady=(0, 10))
+
+        self.exit_button = ttk.Button(self.main_menu_frame, text="Exit", command=self.exit_program)
+        self.exit_button.pack(fill=tk.X, pady=(10, 0))
+
+    def show_register_frame(self):
+        self.clear_frame()
+
+        self.register_frame = ttk.Frame(self.root)
+        self.register_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+
+        ttk.Label(self.register_frame, text="Register Resident", font=("Helvetica", 16)).pack(pady=(0, 20))
+
+        ttk.Label(self.register_frame, text="Enter Name:").pack()
+        self.name_entry = ttk.Entry(self.register_frame, width=40)
+        self.name_entry.pack(pady=(0, 10))
+
+        ttk.Label(self.register_frame, text="Enter House Number:").pack()
+        self.house_number_entry = ttk.Entry(self.register_frame, width=40)
+        self.house_number_entry.pack(pady=(0, 10))
+
+        ttk.Label(self.register_frame, text="Enter Zone (1-6):").pack()
+        self.zone_entry = ttk.Combobox(self.register_frame, values=[1, 2, 3, 4, 5, 6], state="readonly", width=37)
+        self.zone_entry.pack(pady=(0, 20))
+
+        self.register_button = ttk.Button(self.register_frame, text="Register", command=self.register_resident)
+        self.register_button.pack(fill=tk.X, pady=(10, 0))
+
+        self.back_button = ttk.Button(self.register_frame, text="Back to Main Menu", command=self.show_main_menu)
+        self.back_button.pack(fill=tk.X, pady=(10, 0))
+
+    def register_resident(self):
+        name = self.name_entry.get()
+        house_number = self.house_number_entry.get()
+        zone = self.zone_entry.get()
+
+        if not name or not house_number or not zone:
+            messagebox.showerror("Error", "Please provide valid details.")
+            return
+
+        resident = {"name": name, "house_number": house_number, "zone": zone, "waste_added": {}}
+        self.residents_data[house_number] = resident
+        self.save_residents_data()
+
+        messagebox.showinfo("Success", f"Resident {name} registered successfully!")
+        self.show_main_menu()
+
+    def show_login_frame(self):
+        self.clear_frame()
+
+        self.login_frame = ttk.Frame(self.root)
+        self.login_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+
+        ttk.Label(self.login_frame, text="Login", font=("Helvetica", 16)).pack(pady=(0, 20))
+
+        ttk.Label(self.login_frame, text="Enter House Number:").pack()
+        self.house_number_login_entry = ttk.Entry(self.login_frame, width=40)
+        self.house_number_login_entry.pack(pady=(0, 10))
+
+        self.login_button = ttk.Button(self.login_frame, text="Login", command=self.login_resident)
+        self.login_button.pack(fill=tk.X, pady=(10, 0))
+
+        self.back_button = ttk.Button(self.login_frame, text="Back to Main Menu", command=self.show_main_menu)
+        self.back_button.pack(fill=tk.X, pady=(10, 0))
+
+    def login_resident(self):
+        house_number = self.house_number_login_entry.get()
+
+        if house_number not in self.residents_data:
+            messagebox.showerror("Error", "Resident not found. Please register first.")
+            return
+
+        self.current_resident = self.residents_data[house_number]
+        self.show_resident_menu()
+
+    def show_resident_menu(self):
+        self.clear_frame()
+
+        self.resident_menu_frame = ttk.Frame(self.root)
+        self.resident_menu_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+
+        ttk.Label(self.resident_menu_frame, text=f"Welcome back, {self.current_resident['name']}!", font=("Helvetica", 16)).pack(pady=(0, 20))
+
+        self.show_collection_days_button = ttk.Button(self.resident_menu_frame, text="Show Collection Days", command=self.show_collection_days)
+        self.show_collection_days_button.pack(fill=tk.X, pady=(0, 10))
+
+        self.show_instructions_button = ttk.Button(self.resident_menu_frame, text="Show Instructions and Reduction Tips", command=self.show_instructions)
+        self.show_instructions_button.pack(fill=tk.X, pady=(0, 10))
+
+        self.add_waste_button = ttk.Button(self.resident_menu_frame, text="Add Waste", command=self.add_waste)
+        self.add_waste_button.pack(fill=tk.X, pady=(0, 10))
+
+        self.calculate_discount_button = ttk.Button(self.resident_menu_frame, text="Calculate Recycling Discount", command=self.calculate_discount)
+        self.calculate_discount_button.pack(fill=tk.X, pady=(0, 10))
+
+        self.display_summary_button = ttk.Button(self.resident_menu_frame, text="Display Summary", command=self.display_summary)
+        self.display_summary_button.pack(fill=tk.X, pady=(0, 10))
+
+        self.logout_button = ttk.Button(self.resident_menu_frame, text="Logout", command=self.logout)
+        self.logout_button.pack(fill=tk.X, pady=(0, 10))
+
+    def show_collection_days(self):
+        zone = int(self.current_resident["zone"])
+        collection_days = {
+            1: "Monday and Thursday",
+            2: "Tuesday and Friday",
+            3: "Wednesday and Saturday",
+            4: "Monday and Thursday",
+            5: "Tuesday and Friday",
+            6: "Wednesday and Saturday"
+        }
+        messagebox.showinfo("Collection Days", f"Your collection days are: {collection_days[zone]}")
+
+    def show_instructions(self):
+        instructions = """Waste Sorting Instructions:
+- Plastic: Bottles, bags, containers
+- Paper: Newspapers, magazines, cardboard
+- Metal: Cans, aluminum foil
+- Glass: Bottles, jars
+
+Reduction Tips:
+- Reduce, reuse, and recycle to help protect the environment!
+- Avoid single-use plastics."""
+        messagebox.showinfo("Waste Sorting Instructions and Tips", instructions)
+
+    def add_waste(self):
+        waste_types = ["Plastic", "Paper", "Metal", "Glass"]
+        waste_type = self.show_waste_selection(waste_types)
+
+        if waste_type is None:
+            return
+
+        amount = self.show_amount_entry()
+
+        if amount is None or amount <= 0:
+            messagebox.showerror("Error", "Please enter a valid amount of waste.")
+            return
+
+        self.current_resident["waste_added"][waste_type] = self.current_resident["waste_added"].get(waste_type, 0) + amount
+        self.save_residents_data()
+
+        messagebox.showinfo("Success", f"{amount} kg of {waste_type} added successfully!")
+
+    def show_waste_selection(self, waste_types):
+        waste_type = None
+        selection_window = tk.Toplevel(self.root)
+        selection_window.title("Select Waste Type")
+
+        ttk.Label(selection_window, text="Select Waste Type:").pack(pady=(0, 10))
+
+        waste_type_combobox = ttk.Combobox(selection_window, values=waste_types, state="readonly", width=30)
+        waste_type_combobox.set("Choose Waste Type")
+        waste_type_combobox.pack(pady=(0, 20))
+
+        def select_waste_type():
+            nonlocal waste_type
+            waste_type = waste_type_combobox.get()
+            selection_window.destroy()
+
+        select_button = ttk.Button(selection_window, text="Select", command=select_waste_type)
+        select_button.pack(pady=10)
+
+        selection_window.wait_window()
+
+        return waste_type
+
+    def show_amount_entry(self):
+        amount = None
+        amount_window = tk.Toplevel(self.root)
+        amount_window.title("Enter Waste Amount")
+
+        ttk.Label(amount_window, text="Enter the amount of waste (in kg):").pack(pady=(0, 10))
+
+        amount_entry = ttk.Entry(amount_window, width=30)
+        amount_entry.pack(pady=(0, 20))
+
+        def submit_amount():
+            nonlocal amount
+            try:
+                amount = float(amount_entry.get())
+                amount_window.destroy()
+            except ValueError:
+                messagebox.showerror("Error", "Please enter a valid number.")
+
+        submit_button = ttk.Button(amount_window, text="Submit", command=submit_amount)
+        submit_button.pack(pady=10)
+
+        amount_window.wait_window()
+
+        return amount
+
+    def calculate_discount(self):
+        total_payment = self.show_payment_entry()
+        if total_payment is None:
+            return
+
+        discount = self.get_discount_based_on_waste()
+        final_payment = max(0, total_payment - discount)
+
+        messagebox.showinfo("Recycling Discount", f"Recycling Discount: {discount} PHP\nFinal Payment After Discount: {final_payment} PHP")
+
+    def show_payment_entry(self):
+        payment_window = tk.Toplevel(self.root)
+        payment_window.title("Enter Total Payment")
+
+        ttk.Label(payment_window, text="Enter Total Payment (before discount) in PHP:").pack(pady=(0, 10))
+
+        payment_entry = ttk.Entry(payment_window, width=30)
+        payment_entry.pack(pady=(0, 20))
+
+        total_payment = None
+
+        def submit_payment():
+            nonlocal total_payment
+            try:
+                total_payment = float(payment_entry.get())
+                payment_window.destroy()
+            except ValueError:
+                messagebox.showerror("Error", "Please enter a valid amount.")
+
+        submit_button = ttk.Button(payment_window, text="Submit", command=submit_payment)
+        submit_button.pack(pady=10)
+
+        payment_window.wait_window()
+
+        return total_payment
+
+    def get_discount_based_on_waste(self):
+        total_waste = sum(self.current_resident["waste_added"].values())
+        return total_waste * 5
+
+    def display_summary(self):
+        total_payment = self.show_payment_entry()
+        if total_payment is None:
+            return
+
+        waste_log = "\n".join([f"{waste_type}: {amount} kg" for waste_type, amount in self.current_resident["waste_added"].items()])
+        discount = self.get_discount_based_on_waste()
+        final_payment = max(0, total_payment - discount)
+
+        summary = f"""Resident: {self.current_resident['name']}
+House Number: {self.current_resident['house_number']}
+Zone: {self.current_resident['zone']}
+Waste Added:
+{waste_log}
+Recycling Discount: {discount} PHP
+Final Payment After Discount: {final_payment} PHP"""
+        messagebox.showinfo("Summary", summary)
+
+    def logout(self):
+        messagebox.showinfo("Logged Out", "Logging out.")
+        self.current_resident = None
+        self.show_main_menu()
+
+    def clear_frame(self):
+        for widget in self.root.winfo_children():
+            widget.destroy()
+
+    def show_main_menu(self):
+        self.clear_frame()
+        self.setup_ui()
+
+    def exit_program(self):
+        self.root.quit()
+
+if __name__ == "__main__":
+    app = BinItToWinItApp()
+    app.root.mainloop()
